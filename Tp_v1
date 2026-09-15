@@ -1,810 +1,697 @@
--- Waypoint Teleport System — CHUNK 1 of 4
+-- Waypoint Teleport System v2 — with loading screen
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
+local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local pg = player:WaitForChild("PlayerGui")
 
-local CONFIG = {
+local CFG = {
     SaveFile = "Waypoints.json",
-    MaxWaypoints = 50,
-    UIKeybind = Enum.KeyCode.RightShift,
-    ToggleKeybind = Enum.KeyCode.LeftControl,
-    SafeArenaCoords = Vector3.new(790.659, 27.033, -62.436),
-    TundraCoords = Vector3.new(-25.759, 4.005, 49.839),
-    SafeArenaKeybind = Enum.KeyCode.F,
-    TundraKeybind = Enum.KeyCode.G,
+    Max = 50,
+    UIKey = Enum.KeyCode.RightShift,
+    CtrlKey = Enum.KeyCode.LeftControl,
+    SA = Vector3.new(790.659, 27.033, -62.436),
+    TU = Vector3.new(-25.759, 4.005, 49.839),
+    SAKey = Enum.KeyCode.F,
+    TUKey = Enum.KeyCode.G,
 }
+local W = {}
 
-local waypoints = {}
-
-local function loadWaypoints()
-    if writefile and readfile and isfile then
-        if isfile(CONFIG.SaveFile) then
-            local success, data = pcall(function()
-                return game:GetService("HttpService"):JSONDecode(readfile(CONFIG.SaveFile))
-            end)
-            if success and type(data) == "table" then
-                waypoints = data
-            end
-        end
-    end
-end
-
-local function saveWaypoints()
-    if writefile then
-        local success, encoded = pcall(function()
-            return game:GetService("HttpService"):JSONEncode(waypoints)
+local function loadW()
+    if writefile and readfile and isfile and isfile(CFG.SaveFile) then
+        local s, d = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(readfile(CFG.SaveFile))
         end)
-        if success then
-            pcall(writefile, CONFIG.SaveFile, encoded)
-        end
+        if s and type(d) == "table" then W = d end
     end
 end
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "WaypointUI"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-local ok = pcall(function() screenGui.Parent = CoreGui end)
-if not ok or not screenGui.Parent then
-    screenGui.Parent = playerGui
+local function saveW()
+    if writefile then
+        local s, e = pcall(function()
+            return game:GetService("HttpService"):JSONEncode(W)
+        end)
+        if s then pcall(writefile, CFG.SaveFile, e) end
+    end
 end
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 560, 0, 460)
-mainFrame.Position = UDim2.new(0.5, -280, 0.5, -230)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
+-- ScreenGui
+local sg = Instance.new("ScreenGui")
+sg.Name = "WaypointUI"
+sg.ResetOnSpawn = false
+sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+local ok = pcall(function() sg.Parent = CoreGui end)
+if not ok or not sg.Parent then sg.Parent = pg end
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
-corner.Parent = mainFrame
+-- ==================== LOADING SCREEN ====================
+local loadFrame = Instance.new("Frame")
+loadFrame.Name = "LoadingScreen"
+loadFrame.Size = UDim2.new(0, 360, 0, 160)
+loadFrame.Position = UDim2.new(0.5, -180, 0.5, -80)
+loadFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+loadFrame.BorderSizePixel = 0
+loadFrame.ZIndex = 100
+loadFrame.Parent = sg
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(80, 80, 120)
-stroke.Thickness = 1.5
-stroke.Parent = mainFrame
+local lc = Instance.new("UICorner")
+lc.CornerRadius = UDim.new(0, 12)
+lc.Parent = loadFrame
 
-local miniButton = Instance.new("TextButton")
-miniButton.Name = "MiniButton"
-miniButton.Size = UDim2.new(0, 50, 0, 50)
-miniButton.Position = UDim2.new(0, 20, 0.5, -25)
-miniButton.BackgroundColor3 = Color3.fromRGB(80, 80, 130)
-miniButton.Text = "📋"
-miniButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-miniButton.TextSize = 24
-miniButton.Font = Enum.Font.GothamBold
-miniButton.Visible = true
-miniButton.Active = true
-miniButton.Draggable = true
-miniButton.Parent = screenGui
+local ls = Instance.new("UIStroke")
+ls.Color = Color3.fromRGB(80, 80, 130)
+ls.Thickness = 1.5
+ls.Parent = loadFrame
 
-local miniCorner = Instance.new("UICorner")
-miniCorner.CornerRadius = UDim.new(1, 0)
-miniCorner.Parent = miniButton
+local loadTitle = Instance.new("TextLabel")
+loadTitle.Size = UDim2.new(1, -20, 0, 40)
+loadTitle.Position = UDim2.new(0, 10, 0, 15)
+loadTitle.BackgroundTransparency = 1
+loadTitle.Text = "🧟 Survive Zombie Arena"
+loadTitle.TextColor3 = Color3.fromRGB(220, 255, 220)
+loadTitle.TextSize = 18
+loadTitle.Font = Enum.Font.GothamBold
+loadTitle.ZIndex = 101
+loadTitle.Parent = loadFrame
 
-local miniStroke = Instance.new("UIStroke")
-miniStroke.Color = Color3.fromRGB(150, 150, 220)
-miniStroke.Thickness = 2
-miniStroke.Parent = miniButton
+local loadSub = Instance.new("TextLabel")
+loadSub.Size = UDim2.new(1, -20, 0, 20)
+loadSub.Position = UDim2.new(0, 10, 0, 50)
+loadSub.BackgroundTransparency = 1
+loadSub.Text = "Loading interface..."
+loadSub.TextColor3 = Color3.fromRGB(170, 180, 210)
+loadSub.TextSize = 12
+loadSub.Font = Enum.Font.Gotham
+loadSub.ZIndex = 101
+loadSub.Parent = loadFrame
 
-local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 35)
-titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-titleBar.BorderSizePixel = 0
-titleBar.Parent = mainFrame
+local barBg = Instance.new("Frame")
+barBg.Size = UDim2.new(1, -40, 0, 14)
+barBg.Position = UDim2.new(0, 20, 0, 90)
+barBg.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+barBg.BorderSizePixel = 0
+barBg.ZIndex = 101
+barBg.Parent = loadFrame
 
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 10)
-titleCorner.Parent = titleBar
+local barBgCorner = Instance.new("UICorner")
+barBgCorner.CornerRadius = UDim.new(1, 0)
+barBgCorner.Parent = barBg
 
-local titleFix = Instance.new("Frame")
-titleFix.Size = UDim2.new(1, 0, 0, 15)
-titleFix.Position = UDim2.new(0, 0, 1, -15)
-titleFix.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-titleFix.BorderSizePixel = 0
-titleFix.Parent = titleBar
+local barFill = Instance.new("Frame")
+barFill.Size = UDim2.new(0, 0, 1, 0)
+barFill.BackgroundColor3 = Color3.fromRGB(100, 220, 140)
+barFill.BorderSizePixel = 0
+barFill.ZIndex = 102
+barFill.Parent = barBg
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -100, 1, 0)
-titleLabel.Position = UDim2.new(0, 10, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "📍 Waypoint Manager"
-titleLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
-titleLabel.TextSize = 16
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = titleBar
+local barFillCorner = Instance.new("UICorner")
+barFillCorner.CornerRadius = UDim.new(1, 0)
+barFillCorner.Parent = barFill
 
-local minBtn = Instance.new("TextButton")
-minBtn.Size = UDim2.new(0, 30, 0, 30)
-minBtn.Position = UDim2.new(1, -70, 0, 3)
-minBtn.BackgroundColor3 = Color3.fromRGB(200, 160, 50)
-minBtn.Text = "—"
-minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minBtn.TextSize = 18
-minBtn.Font = Enum.Font.GothamBold
-minBtn.Parent = titleBar
+local loadPct = Instance.new("TextLabel")
+loadPct.Size = UDim2.new(1, -20, 0, 20)
+loadPct.Position = UDim2.new(0, 10, 0, 115)
+loadPct.BackgroundTransparency = 1
+loadPct.Text = "0%"
+loadPct.TextColor3 = Color3.fromRGB(180, 200, 230)
+loadPct.TextSize = 12
+loadPct.Font = Enum.Font.Code
+loadPct.ZIndex = 101
+loadPct.Parent = loadFrame
 
-local minCorner = Instance.new("UICorner")
-minCorner.CornerRadius = UDim.new(0, 6)
-minCorner.Parent = minBtn
+local function setProgress(pct, txt)
+    TweenService:Create(barFill, TweenInfo.new(0.25), {
+        Size = UDim2.new(pct / 100, 0, 1, 0)
+    }):Play()
+    loadPct.Text = tostring(math.floor(pct)) .. "%"
+    if txt then loadSub.Text = txt end
+end
+-- =========================================================
 
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -35, 0, 3)
-closeBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-closeBtn.Text = "✕"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextSize = 16
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.Parent = titleBar
+-- ==================== MAIN UI ====================
+local mf = Instance.new("Frame")
+mf.Name = "MainFrame"
+mf.Size = UDim2.new(0, 560, 0, 460)
+mf.Position = UDim2.new(0.5, -280, 0.5, -230)
+mf.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+mf.BorderSizePixel = 0
+mf.Active = true
+mf.Draggable = true
+mf.Visible = false
+mf.Parent = sg
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 6)
-closeCorner.Parent = closeBtn
--- Waypoint Teleport System — CHUNK 2 of 4
-local sidebar = Instance.new("Frame")
-sidebar.Name = "Sidebar"
-sidebar.Size = UDim2.new(0, 140, 1, -45)
-sidebar.Position = UDim2.new(0, 10, 0, 40)
-sidebar.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
-sidebar.BorderSizePixel = 0
-sidebar.Parent = mainFrame
+local c = Instance.new("UICorner", mf)
+c.CornerRadius = UDim.new(0, 10)
+local st = Instance.new("UIStroke", mf)
+st.Color = Color3.fromRGB(80, 80, 120)
+st.Thickness = 1.5
 
-local sidebarCorner = Instance.new("UICorner")
-sidebarCorner.CornerRadius = UDim.new(0, 8)
-sidebarCorner.Parent = sidebar
+-- Mini toggle button
+local mb = Instance.new("TextButton")
+mb.Size = UDim2.new(0, 50, 0, 50)
+mb.Position = UDim2.new(0, 20, 0.5, -25)
+mb.BackgroundColor3 = Color3.fromRGB(80, 80, 130)
+mb.Text = "📋"
+mb.TextColor3 = Color3.fromRGB(255, 255, 255)
+mb.TextSize = 24
+mb.Font = Enum.Font.GothamBold
+mb.Draggable = true
+mb.Visible = false
+mb.Parent = sg
 
-local sidebarLayout = Instance.new("UIListLayout")
-sidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
-sidebarLayout.Padding = UDim.new(0, 6)
-sidebarLayout.Parent = sidebar
+local mbc = Instance.new("UICorner", mb)
+mbc.CornerRadius = UDim.new(1, 0)
+local mbs = Instance.new("UIStroke", mb)
+mbs.Color = Color3.fromRGB(150, 150, 220)
+mbs.Thickness = 2
 
-local sidebarPadding = Instance.new("UIPadding")
-sidebarPadding.PaddingTop = UDim.new(0, 8)
-sidebarPadding.PaddingLeft = UDim.new(0, 6)
-sidebarPadding.PaddingRight = UDim.new(0, 6)
-sidebarPadding.Parent = sidebar
+-- Title bar
+local tb = Instance.new("Frame")
+tb.Size = UDim2.new(1, 0, 0, 35)
+tb.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+tb.BorderSizePixel = 0
+tb.Parent = mf
 
-local contentArea = Instance.new("Frame")
-contentArea.Name = "ContentArea"
-contentArea.Size = UDim2.new(1, -170, 1, -45)
-contentArea.Position = UDim2.new(0, 160, 0, 40)
-contentArea.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-contentArea.BorderSizePixel = 0
-contentArea.Parent = mainFrame
+local tc = Instance.new("UICorner", tb)
+tc.CornerRadius = UDim.new(0, 10)
+local tf = Instance.new("Frame")
+tf.Size = UDim2.new(1, 0, 0, 15)
+tf.Position = UDim2.new(0, 0, 1, -15)
+tf.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+tf.BorderSizePixel = 0
+tf.Parent = tb
 
-local contentCorner = Instance.new("UICorner")
-contentCorner.CornerRadius = UDim.new(0, 8)
-contentCorner.Parent = contentArea
+local tl = Instance.new("TextLabel")
+tl.Size = UDim2.new(1, -100, 1, 0)
+tl.Position = UDim2.new(0, 10, 0, 0)
+tl.BackgroundTransparency = 1
+tl.Text = "📍 Waypoint Manager"
+tl.TextColor3 = Color3.fromRGB(220, 220, 255)
+tl.TextSize = 16
+tl.Font = Enum.Font.GothamBold
+tl.TextXAlignment = Enum.TextXAlignment.Left
+tl.Parent = tb
+
+local mnb = Instance.new("TextButton")
+mnb.Size = UDim2.new(0, 30, 0, 30)
+mnb.Position = UDim2.new(1, -70, 0, 3)
+mnb.BackgroundColor3 = Color3.fromRGB(200, 160, 50)
+mnb.Text = "—"
+mnb.TextColor3 = Color3.fromRGB(255, 255, 255)
+mnb.TextSize = 18
+mnb.Font = Enum.Font.GothamBold
+mnb.Parent = tb
+local mnbc = Instance.new("UICorner", mnb)
+mnbc.CornerRadius = UDim.new(0, 6)
+
+local cb = Instance.new("TextButton")
+cb.Size = UDim2.new(0, 30, 0, 30)
+cb.Position = UDim2.new(1, -35, 0, 3)
+cb.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+cb.Text = "✕"
+cb.TextColor3 = Color3.fromRGB(255, 255, 255)
+cb.TextSize = 16
+cb.Font = Enum.Font.GothamBold
+cb.Parent = tb
+local cbc = Instance.new("UICorner", cb)
+cbc.CornerRadius = UDim.new(0, 6)
+
+-- Sidebar
+local sb = Instance.new("Frame")
+sb.Size = UDim2.new(0, 140, 1, -45)
+sb.Position = UDim2.new(0, 10, 0, 40)
+sb.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+sb.BorderSizePixel = 0
+sb.Parent = mf
+local sbc = Instance.new("UICorner", sb)
+sbc.CornerRadius = UDim.new(0, 8)
+
+local sbl = Instance.new("UIListLayout", sb)
+sbl.SortOrder = Enum.SortOrder.LayoutOrder
+sbl.Padding = UDim.new(0, 6)
+local sbp = Instance.new("UIPadding", sb)
+sbp.PaddingTop = UDim.new(0, 8)
+sbp.PaddingLeft = UDim.new(0, 6)
+sbp.PaddingRight = UDim.new(0, 6)
+
+-- Content area
+local ca = Instance.new("Frame")
+ca.Size = UDim2.new(1, -170, 1, -45)
+ca.Position = UDim2.new(0, 160, 0, 40)
+ca.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+ca.BorderSizePixel = 0
+ca.Parent = mf
+local cac = Instance.new("UICorner", ca)
+cac.CornerRadius = UDim.new(0, 8)
 
 local tabs = {}
 local activeTab = nil
 
-local function switchTab(tabName)
-    for name, tabFrame in pairs(tabs) do
-        tabFrame.Visible = (name == tabName)
-    end
-    activeTab = tabName
+local function switchTab(n)
+    for k, v in pairs(tabs) do v.Visible = (k == n) end
+    activeTab = n
 end
 
-local function createSidebarButton(name)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 34)
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(220, 220, 255)
-    btn.TextSize = 13
-    btn.Font = Enum.Font.GothamBold
-    btn.Parent = sidebar
-    
-    local bc = Instance.new("UICorner")
+local function createSidebarBtn(n)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, 0, 0, 34)
+    b.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    b.Text = n
+    b.TextColor3 = Color3.fromRGB(220, 220, 255)
+    b.TextSize = 13
+    b.Font = Enum.Font.GothamBold
+    b.Parent = sb
+    local bc = Instance.new("UICorner", b)
     bc.CornerRadius = UDim.new(0, 6)
-    bc.Parent = btn
-    
-    btn.MouseEnter:Connect(function()
-        if activeTab ~= name then
-            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 90)
-        end
-    end)
-    
-    btn.MouseLeave:Connect(function()
-        if activeTab ~= name then
-            btn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-        end
-    end)
-    
-    btn.MouseButton1Click:Connect(function()
-        switchTab(name)
-        for _, c in ipairs(sidebar:GetChildren()) do
-            if c:IsA("TextButton") then
-                c.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    b.MouseButton1Click:Connect(function()
+        switchTab(n)
+        for _, ch in ipairs(sb:GetChildren()) do
+            if ch:IsA("TextButton") then
+                ch.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
             end
         end
-        btn.BackgroundColor3 = Color3.fromRGB(80, 80, 130)
+        b.BackgroundColor3 = Color3.fromRGB(80, 80, 130)
     end)
-    
-    return btn
+    return b
 end
 
-local function createTab(name)
-    local tabFrame = Instance.new("Frame")
-    tabFrame.Name = name .. "Tab"
-    tabFrame.Size = UDim2.new(1, -16, 1, -16)
-    tabFrame.Position = UDim2.new(0, 8, 0, 8)
-    tabFrame.BackgroundTransparency = 1
-    tabFrame.Visible = false
-    tabFrame.Parent = contentArea
-    tabs[name] = tabFrame
-    return tabFrame
+local function createTab(n)
+    local f = Instance.new("Frame")
+    f.Name = n .. "Tab"
+    f.Size = UDim2.new(1, -16, 1, -16)
+    f.Position = UDim2.new(0, 8, 0, 8)
+    f.BackgroundTransparency = 1
+    f.Visible = false
+    f.Parent = ca
+    tabs[n] = f
+    return f
 end
 
-local function teleportTo(position)
-    local character = player.Character
-    if not character then return end
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then
-        hrp = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
-    end
-    if not hrp then return end
-    
-    pcall(function()
-        hrp.CFrame = CFrame.new(position)
-    end)
-end
--- Waypoint Teleport System — CHUNK 3 of 4
-local waypointTab = createTab("Waypoints")
-
-local saveBtn = Instance.new("TextButton")
-saveBtn.Size = UDim2.new(1, 0, 0, 40)
-saveBtn.Position = UDim2.new(0, 0, 0, 0)
-saveBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 60)
-saveBtn.Text = "➕ Save Current Position"
-saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-saveBtn.TextSize = 14
-saveBtn.Font = Enum.Font.GothamBold
-saveBtn.Parent = waypointTab
-
-local saveCorner = Instance.new("UICorner")
-saveCorner.CornerRadius = UDim.new(0, 8)
-saveCorner.Parent = saveBtn
-
-local coordLabel = Instance.new("TextLabel")
-coordLabel.Size = UDim2.new(1, 0, 0, 25)
-coordLabel.Position = UDim2.new(0, 0, 0, 45)
-coordLabel.BackgroundTransparency = 1
-coordLabel.Text = "X: 0.0  Y: 0.0  Z: 0.0"
-coordLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
-coordLabel.TextSize = 13
-coordLabel.Font = Enum.Font.Code
-coordLabel.TextXAlignment = Enum.TextXAlignment.Left
-coordLabel.Parent = waypointTab
-
-local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, 0, 1, -80)
-scroll.Position = UDim2.new(0, 0, 0, 75)
-scroll.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-scroll.BorderSizePixel = 0
-scroll.ScrollBarThickness = 6
-scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 120)
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-scroll.Parent = waypointTab
-
-local scrollCorner = Instance.new("UICorner")
-scrollCorner.CornerRadius = UDim.new(0, 8)
-scrollCorner.Parent = scroll
-
-local scrollPadding = Instance.new("UIPadding")
-scrollPadding.PaddingTop = UDim.new(0, 6)
-scrollPadding.PaddingBottom = UDim.new(0, 6)
-scrollPadding.PaddingLeft = UDim.new(0, 6)
-scrollPadding.PaddingRight = UDim.new(0, 6)
-scrollPadding.Parent = scroll
-
-local listLayout = Instance.new("UIListLayout")
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.Padding = UDim.new(0, 6)
-listLayout.Parent = scroll
-
-local function createWaypointRow(waypoint, index)
-    local row = Instance.new("Frame")
-    row.Name = "Waypoint_" .. index
-    row.Size = UDim2.new(1, -6, 0, 40)
-    row.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
-    row.BorderSizePixel = 0
-    row.Parent = scroll
-    
-    local rowCorner = Instance.new("UICorner")
-    rowCorner.CornerRadius = UDim.new(0, 6)
-    rowCorner.Parent = row
-    
-    local nameLbl = Instance.new("TextLabel")
-    nameLbl.Size = UDim2.new(1, -100, 0, 20)
-    nameLbl.Position = UDim2.new(0, 8, 0, 2)
-    nameLbl.BackgroundTransparency = 1
-    nameLbl.Text = waypoint.name or ("Waypoint " .. index)
-    nameLbl.TextColor3 = Color3.fromRGB(230, 230, 255)
-    nameLbl.TextSize = 13
-    nameLbl.Font = Enum.Font.GothamBold
-    nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-    nameLbl.Parent = row
-    
-    local coordLbl = Instance.new("TextLabel")
-    coordLbl.Size = UDim2.new(1, -100, 0, 14)
-    coordLbl.Position = UDim2.new(0, 8, 0, 22)
-    coordLbl.BackgroundTransparency = 1
-    coordLbl.Text = string.format("%.1f, %.1f, %.1f", waypoint.x, waypoint.y, waypoint.z)
-    coordLbl.TextColor3 = Color3.fromRGB(140, 160, 200)
-    coordLbl.TextSize = 11
-    coordLbl.Font = Enum.Font.Code
-    coordLbl.TextXAlignment = Enum.TextXAlignment.Left
-    coordLbl.Parent = row
-    
-    local tpBtn = Instance.new("TextButton")
-    tpBtn.Size = UDim2.new(0, 32, 0, 32)
-    tpBtn.Position = UDim2.new(1, -74, 0, 4)
-    tpBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
-    tpBtn.Text = "▶"
-    tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    tpBtn.TextSize = 16
-    tpBtn.Font = Enum.Font.GothamBold
-    tpBtn.Parent = row
-    
-    local tpCorner = Instance.new("UICorner")
-    tpCorner.CornerRadius = UDim.new(0, 6)
-    tpCorner.Parent = tpBtn
-    
-    tpBtn.MouseButton1Click:Connect(function()
-        teleportTo(Vector3.new(waypoint.x, waypoint.y, waypoint.z))
-        tpBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-        task.delay(0.3, function()
-            tpBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
-        end)
-    end)
-    
-    local delBtn = Instance.new("TextButton")
-    delBtn.Size = UDim2.new(0, 32, 0, 32)
-    delBtn.Position = UDim2.new(1, -38, 0, 4)
-    delBtn.BackgroundColor3 = Color3.fromRGB(140, 50, 50)
-    delBtn.Text = "✕"
-    delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    delBtn.TextSize = 14
-    delBtn.Font = Enum.Font.GothamBold
-    delBtn.Parent = row
-    
-    local delCorner = Instance.new("UICorner")
-    delCorner.CornerRadius = UDim.new(0, 6)
-    delCorner.Parent = delBtn
-    
-    delBtn.MouseButton1Click:Connect(function()
-        table.remove(waypoints, index)
-        saveWaypoints()
-        refreshWaypoints()
-    end)
-    
-    return row
-end
-
-function refreshWaypoints()
-    for _, child in ipairs(scroll:GetChildren()) do
-        if child:IsA("Frame") then
-            child:Destroy()
-        end
-    end
-    for i, wp in ipairs(waypoints) do
-        createWaypointRow(wp, i)
+local function tp(pos)
+    local ch = player.Character
+    if not ch then return end
+    local h = ch:FindFirstChild("HumanoidRootPart")
+        or ch:FindFirstChild("UpperTorso")
+        or ch:FindFirstChild("Torso")
+    if h then
+        pcall(function() h.CFrame = CFrame.new(pos) end)
     end
 end
 
-saveBtn.MouseButton1Click:Connect(function()
-    local character = player.Character
-    if not character then return end
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    
-    if #waypoints >= CONFIG.MaxWaypoints then return end
-    
-    local pos = hrp.Position
-    table.insert(waypoints, {
-        x = pos.X,
-        y = pos.Y,
-        z = pos.Z,
-        name = "Waypoint " .. (#waypoints + 1)
-    })
-    
-    saveWaypoints()
-    refreshWaypoints()
-end)
+-- Waypoints tab
+local wt = createTab("Waypoints")
 
-local arenaTab = createTab("Survive Zombie Arena")
+local svb = Instance.new("TextButton")
+svb.Size = UDim2.new(1, 0, 0, 40)
+svb.BackgroundColor3 = Color3.fromRGB(60, 140, 60)
+svb.Text = "➕ Save Current Position"
+svb.TextColor3 = Color3.fromRGB(255, 255, 255)
+svb.TextSize = 14
+svb.Font = Enum.Font.GothamBold
+svb.Parent = wt
+local svbc = Instance.new("UICorner", svb)
+svbc.CornerRadius = UDim.new(0, 8)
 
-local arenaHeader = Instance.new("TextLabel")
-arenaHeader.Size = UDim2.new(1, 0, 0, 30)
-arenaHeader.Position = UDim2.new(0, 0, 0, 0)
-arenaHeader.BackgroundTransparency = 1
-arenaHeader.Text = "🧟 Survive Zombie Arena"
-arenaHeader.TextColor3 = Color3.fromRGB(220, 255, 220)
-arenaHeader.TextSize = 16
-arenaHeader.Font = Enum.Font.GothamBold
-arenaHeader.TextXAlignment = Enum.TextXAlignment.Left
-arenaHeader.Parent = arenaTab
+local cl = Instance.new("TextLabel")
+cl.Size = UDim2.new(1, 0, 0, 25)
+cl.Position = UDim2.new(0, 0, 0, 45)
+cl.BackgroundTransparency = 1
+cl.Text = "X: 0.0  Y: 0.0  Z: 0.0"
+cl.TextColor3 = Color3.fromRGB(150, 200, 255)
+cl.TextSize = 13
+cl.Font = Enum.Font.Code
+cl.TextXAlignment = Enum.TextXAlignment.Left
+cl.Parent = wt
 
-local dropdownContainer = Instance.new("Frame")
-dropdownContainer.Name = "PirateCoveDropdown"
-dropdownContainer.Size = UDim2.new(1, 0, 0, 40)
-dropdownContainer.Position = UDim2.new(0, 0, 0, 40)
-dropdownContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-dropdownContainer.BorderSizePixel = 0
-dropdownContainer.Parent = arenaTab
+local sc = Instance.new("ScrollingFrame")
+sc.Size = UDim2.new(1, 0, 1, -80)
+sc.Position = UDim2.new(0, 0, 0, 75)
+sc.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+sc.BorderSizePixel = 0
+sc.ScrollBarThickness = 6
+sc.CanvasSize = UDim2.new(0, 0, 0, 0)
+sc.AutomaticCanvasSize = Enum.AutomaticSize.Y
+sc.Parent = wt
+local scc = Instance.new("UICorner", sc)
+scc.CornerRadius = UDim.new(0, 8)
+local scl = Instance.new("UIListLayout", sc)
+scl.Padding = UDim.new(0, 6)
 
-local ddCorner = Instance.new("UICorner")
-ddCorner.CornerRadius = UDim.new(0, 6)
-ddCorner.Parent = dropdownContainer
+local function createWaypointRow(w, i)
+    local r = Instance.new("Frame")
+    r.Size = UDim2.new(1, -6, 0, 40)
+    r.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    r.Parent = sc
+    local rc = Instance.new("UICorner", r)
+    rc.CornerRadius = UDim.new(0, 6)
 
-local ddHeader = Instance.new("TextButton")
-ddHeader.Size = UDim2.new(1, 0, 0, 40)
-ddHeader.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
-ddHeader.Text = ""
-ddHeader.AutoButtonColor = false
-ddHeader.Parent = dropdownContainer
+    local nl = Instance.new("TextLabel")
+    nl.Size = UDim2.new(1, -100, 0, 20)
+    nl.Position = UDim2.new(0, 8, 0, 2)
+    nl.BackgroundTransparency = 1
+    nl.Text = w.name or ("WP " .. i)
+    nl.TextColor3 = Color3.fromRGB(230, 230, 255)
+    nl.TextSize = 13
+    nl.Font = Enum.Font.GothamBold
+    nl.TextXAlignment = Enum.TextXAlignment.Left
+    nl.Parent = r
 
-local ddHeaderCorner = Instance.new("UICorner")
-ddHeaderCorner.CornerRadius = UDim.new(0, 6)
-ddHeaderCorner.Parent = ddHeader
+    local co = Instance.new("TextLabel")
+    co.Size = UDim2.new(1, -100, 0, 14)
+    co.Position = UDim2.new(0, 8, 0, 22)
+    co.BackgroundTransparency = 1
+    co.Text = string.format("%.1f, %.1f, %.1f", w.x, w.y, w.z)
+    co.TextColor3 = Color3.fromRGB(140, 160, 200)
+    co.TextSize = 11
+    co.Font = Enum.Font.Code
+    co.TextXAlignment = Enum.TextXAlignment.Left
+    co.Parent = r
 
-local ddLabel = Instance.new("TextLabel")
-ddLabel.Size = UDim2.new(1, -40, 1, 0)
-ddLabel.Position = UDim2.new(0, 12, 0, 0)
-ddLabel.BackgroundTransparency = 1
-ddLabel.Text = "🏴‍☠️ Pirate Cove"
-ddLabel.TextColor3 = Color3.fromRGB(230, 220, 255)
-ddLabel.TextSize = 14
-ddLabel.Font = Enum.Font.GothamBold
-ddLabel.TextXAlignment = Enum.TextXAlignment.Left
-ddLabel.Parent = ddHeader
-
-local arrow = Instance.new("TextLabel")
-arrow.Size = UDim2.new(0, 30, 1, 0)
-arrow.Position = UDim2.new(1, -30, 0, 0)
-arrow.BackgroundTransparency = 1
-arrow.Text = "▼"
-arrow.TextColor3 = Color3.fromRGB(200, 200, 255)
-arrow.TextSize = 14
-arrow.Font = Enum.Font.GothamBold
-arrow.Parent = ddHeader
-
-local ddContent = Instance.new("Frame")
-ddContent.Size = UDim2.new(1, 0, 0, 0)
-ddContent.Position = UDim2.new(0, 0, 1, 4)
-ddContent.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-ddContent.BorderSizePixel = 0
-ddContent.ClipsDescendants = true
-ddContent.Visible = false
-ddContent.ZIndex = 5
-ddContent.Parent = dropdownContainer
-
-local ddContentCorner = Instance.new("UICorner")
-ddContentCorner.CornerRadius = UDim.new(0, 6)
-ddContentCorner.Parent = ddContent
-
-local ddContentLayout = Instance.new("UIListLayout")
-ddContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ddContentLayout.Padding = UDim.new(0, 4)
-ddContentLayout.Parent = ddContent
-
-local ddContentPadding = Instance.new("UIPadding")
-ddContentPadding.PaddingTop = UDim.new(0, 6)
-ddContentPadding.PaddingBottom = UDim.new(0, 6)
-ddContentPadding.PaddingLeft = UDim.new(0, 6)
-ddContentPadding.PaddingRight = UDim.new(0, 6)
-ddContentPadding.Parent = ddContent
-
-local safeArenaBtn = Instance.new("TextButton")
-safeArenaBtn.Size = UDim2.new(1, -12, 0, 40)
-safeArenaBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 200)
-safeArenaBtn.Text = "🎯 Safe Arena"
-safeArenaBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-safeArenaBtn.TextSize = 14
-safeArenaBtn.Font = Enum.Font.GothamBold
-safeArenaBtn.ZIndex = 6
-safeArenaBtn.Parent = ddContent
-
-local safeArenaCorner = Instance.new("UICorner")
-safeArenaCorner.CornerRadius = UDim.new(0, 6)
-safeArenaCorner.Parent = safeArenaBtn
-
-safeArenaBtn.MouseButton1Click:Connect(function()
-    teleportTo(CONFIG.SafeArenaCoords)
-    safeArenaBtn.BackgroundColor3 = Color3.fromRGB(100, 220, 100)
-    task.delay(0.3, function()
-        safeArenaBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 200)
+    local tpb = Instance.new("TextButton")
+    tpb.Size = UDim2.new(0, 32, 0, 32)
+    tpb.Position = UDim2.new(1, -74, 0, 4)
+    tpb.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
+    tpb.Text = "▶"
+    tpb.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tpb.TextSize = 16
+    tpb.Font = Enum.Font.GothamBold
+    tpb.Parent = r
+    local tpbc = Instance.new("UICorner", tpb)
+    tpbc.CornerRadius = UDim.new(0, 6)
+    tpb.MouseButton1Click:Connect(function()
+        tp(Vector3.new(w.x, w.y, w.z))
     end)
-end)
 
-local placeholderBtn = Instance.new("TextButton")
-placeholderBtn.Size = UDim2.new(1, -12, 0, 40)
-placeholderBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 85)
-placeholderBtn.Text = "➕ More coming soon..."
-placeholderBtn.TextColor3 = Color3.fromRGB(180, 180, 210)
-placeholderBtn.TextSize = 13
-placeholderBtn.Font = Enum.Font.Gotham
-placeholderBtn.ZIndex = 6
-placeholderBtn.Parent = ddContent
-
-local placeholderCorner = Instance.new("UICorner")
-placeholderCorner.CornerRadius = UDim.new(0, 6)
-placeholderCorner.Parent = placeholderBtn
-
-local coveSubtitle = Instance.new("TextLabel")
-coveSubtitle.Name = "PirateCoveSubtitle"
-coveSubtitle.Size = UDim2.new(1, 0, 0, 60)
-coveSubtitle.Position = UDim2.new(0, 0, 0, 84)
-coveSubtitle.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-coveSubtitle.BackgroundTransparency = 0.3
-coveSubtitle.Text = "🏴‍☠️ Pirate Cove → 🎯 Safe Arena\nTeleports you to safety.\nCoords: 790.659, 27.033, -62.436"
-coveSubti
--- Waypoint Teleport System — CHUNK 4 of 4
-local tundraContainer = Instance.new("Frame")
-tundraContainer.Name = "TundraDropdown"
-tundraContainer.Size = UDim2.new(1, 0, 0, 40)
-tundraContainer.Position = UDim2.new(0, 0, 0, 148)
-tundraContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-tundraContainer.BorderSizePixel = 0
-tundraContainer.Parent = arenaTab
-
-local tundraCorner = Instance.new("UICorner")
-tundraCorner.CornerRadius = UDim.new(0, 6)
-tundraCorner.Parent = tundraContainer
-
-local tundraHeader = Instance.new("TextButton")
-tundraHeader.Size = UDim2.new(1, 0, 0, 40)
-tundraHeader.BackgroundColor3 = Color3.fromRGB(50, 70, 100)
-tundraHeader.Text = ""
-tundraHeader.AutoButtonColor = false
-tundraHeader.Parent = tundraContainer
-
-local tundraHeaderCorner = Instance.new("UICorner")
-tundraHeaderCorner.CornerRadius = UDim.new(0, 6)
-tundraHeaderCorner.Parent = tundraHeader
-
-local tundraLabel = Instance.new("TextLabel")
-tundraLabel.Size = UDim2.new(1, -40, 1, 0)
-tundraLabel.Position = UDim2.new(0, 12, 0, 0)
-tundraLabel.BackgroundTransparency = 1
-tundraLabel.Text = "❄️ Tundra"
-tundraLabel.TextColor3 = Color3.fromRGB(215, 240, 255)
-tundraLabel.TextSize = 14
-tundraLabel.Font = Enum.Font.GothamBold
-tundraLabel.TextXAlignment = Enum.TextXAlignment.Left
-tundraLabel.Parent = tundraHeader
-
-local tundraArrow = Instance.new("TextLabel")
-tundraArrow.Size = UDim2.new(0, 30, 1, 0)
-tundraArrow.Position = UDim2.new(1, -30, 0, 0)
-tundraArrow.BackgroundTransparency = 1
-tundraArrow.Text = "▼"
-tundraArrow.TextColor3 = Color3.fromRGB(200, 220, 255)
-tundraArrow.TextSize = 14
-tundraArrow.Font = Enum.Font.GothamBold
-tundraArrow.Parent = tundraHeader
-
-local tundraContent = Instance.new("Frame")
-tundraContent.Size = UDim2.new(1, 0, 0, 0)
-tundraContent.Position = UDim2.new(0, 0, 1, 4)
-tundraContent.BackgroundColor3 = Color3.fromRGB(30, 40, 55)
-tundraContent.BorderSizePixel = 0
-tundraContent.ClipsDescendants = true
-tundraContent.Visible = false
-tundraContent.ZIndex = 5
-tundraContent.Parent = tundraContainer
-
-local tundraContentCorner = Instance.new("UICorner")
-tundraContentCorner.CornerRadius = UDim.new(0, 6)
-tundraContentCorner.Parent = tundraContent
-
-local tundraContentLayout = Instance.new("UIListLayout")
-tundraContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tundraContentLayout.Padding = UDim.new(0, 4)
-tundraContentLayout.Parent = tundraContent
-
-local tundraContentPadding = Instance.new("UIPadding")
-tundraContentPadding.PaddingTop = UDim.new(0, 6)
-tundraContentPadding.PaddingBottom = UDim.new(0, 6)
-tundraContentPadding.PaddingLeft = UDim.new(0, 6)
-tundraContentPadding.PaddingRight = UDim.new(0, 6)
-tundraContentPadding.Parent = tundraContent
-
-local tundraTpBtn = Instance.new("TextButton")
-tundraTpBtn.Size = UDim2.new(1, -12, 0, 40)
-tundraTpBtn.BackgroundColor3 = Color3.fromRGB(70, 140, 200)
-tundraTpBtn.Text = "🎯 Safe Arena 2"
-tundraTpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-tundraTpBtn.TextSize = 14
-tundraTpBtn.Font = Enum.Font.GothamBold
-tundraTpBtn.ZIndex = 6
-tundraTpBtn.Parent = tundraContent
-
-local tundraTpCorner = Instance.new("UICorner")
-tundraTpCorner.CornerRadius = UDim.new(0, 6)
-tundraTpCorner.Parent = tundraTpBtn
-
-tundraTpBtn.MouseButton1Click:Connect(function()
-    teleportTo(CONFIG.TundraCoords)
-    tundraTpBtn.BackgroundColor3 = Color3.fromRGB(100, 220, 100)
-    task.delay(0.3, function()
-        tundraTpBtn.BackgroundColor3 = Color3.fromRGB(70, 140, 200)
+    local db = Instance.new("TextButton")
+    db.Size = UDim2.new(0, 32, 0, 32)
+    db.Position = UDim2.new(1, -38, 0, 4)
+    db.BackgroundColor3 = Color3.fromRGB(140, 50, 50)
+    db.Text = "✕"
+    db.TextColor3 = Color3.fromRGB(255, 255, 255)
+    db.TextSize = 14
+    db.Font = Enum.Font.GothamBold
+    db.Parent = r
+    local dbc = Instance.new("UICorner", db)
+    dbc.CornerRadius = UDim.new(0, 6)
+    db.MouseButton1Click:Connect(function()
+        table.remove(W, i)
+        saveW()
+        _G.refreshWaypoints()
     end)
-end)
-
-local tundraPlaceholder = Instance.new("TextButton")
-tundraPlaceholder.Size = UDim2.new(1, -12, 0, 40)
-tundraPlaceholder.BackgroundColor3 = Color3.fromRGB(50, 65, 85)
-tundraPlaceholder.Text = "➕ More coming soon..."
-tundraPlaceholder.TextColor3 = Color3.fromRGB(180, 200, 220)
-tundraPlaceholder.TextSize = 13
-tundraPlaceholder.Font = Enum.Font.Gotham
-tundraPlaceholder.ZIndex = 6
-tundraPlaceholder.Parent = tundraContent
-
-local tundraPlaceholderCorner = Instance.new("UICorner")
-tundraPlaceholderCorner.CornerRadius = UDim.new(0, 6)
-tundraPlaceholderCorner.Parent = tundraPlaceholder
-
-local tundraSubtitle = Instance.new("TextLabel")
-tundraSubtitle.Name = "TundraSubtitle"
-tundraSubtitle.Size = UDim2.new(1, 0, 0, 60)
-tundraSubtitle.Position = UDim2.new(0, 0, 0, 192)
-tundraSubtitle.BackgroundColor3 = Color3.fromRGB(20, 30, 45)
-tundraSubtitle.BackgroundTransparency = 0.3
-tundraSubtitle.Text = "❄️ Tundra → 🎯 Safe Arena 2\nTeleports you to the snowy biome.\nCoords: -25.759, 4.005, 49.839"
-tundraSubtitle.TextColor3 = Color3.fromRGB(190, 220, 240)
-tundraSubtitle.TextSize = 12
-tundraSubtitle.Font = Enum.Font.Gotham
-tundraSubtitle.TextWrapped = true
-tundraSubtitle.TextXAlignment = Enum.TextXAlignment.Left
-tundraSubtitle.TextYAlignment = Enum.TextYAlignment.Center
-tundraSubtitle.Parent = arenaTab
-
-local tundraSubtitleCorner = Instance.new("UICorner")
-tundraSubtitleCorner.CornerRadius = UDim.new(0, 6)
-tundraSubtitleCorner.Parent = tundraSubtitle
-
-local tundraSubtitlePad = Instance.new("UIPadding")
-tundraSubtitlePad.PaddingLeft = UDim.new(0, 10)
-tundraSubtitlePad.PaddingRight = UDim.new(0, 10)
-tundraSubtitlePad.Parent = tundraSubtitle
-
-local belowContainer = Instance.new("Frame")
-belowContainer.Name = "BelowContainer"
-belowContainer.Size = UDim2.new(1, 0, 1, -256)
-belowContainer.Position = UDim2.new(0, 0, 0, 256)
-belowContainer.BackgroundTransparency = 1
-belowContainer.Parent = arenaTab
-
-local COVE_SUB_TOP = 84
-local TUNDRA_TOP = 148
-local TUNDRA_SUB_TOP = 192
-local BELOW_TOP = 256
-
-local ddOpen = false
-local tundraOpen = false
-
-local function recalcLayout()
-    local coveHeight = 0
-    if ddOpen then coveHeight = 92 end
-    
-    local tundraHeight = 0
-    if tundraOpen then tundraHeight = 92 end
-    
-    local info = TweenInfo.new(0.2)
-    
-    TweenService:Create(coveSubtitle, info, {
-        Position = UDim2.new(0, 0, 0, COVE_SUB_TOP + coveHeight)
-    }):Play()
-    
-    TweenService:Create(tundraContainer, info, {
-        Position = UDim2.new(0, 0, 0, TUNDRA_TOP + coveHeight)
-    }):Play()
-    
-    TweenService:Create(tundraSubtitle, info, {
-        Position = UDim2.new(0, 0, 0, TUNDRA_SUB_TOP + coveHeight + tundraHeight)
-    }):Play()
-    
-    TweenService:Create(belowContainer, info, {
-        Position = UDim2.new(0, 0, 0, BELOW_TOP + coveHeight + tundraHeight)
-    }):Play()
 end
 
-ddHeader.MouseButton1Click:Connect(function()
-    ddOpen = not ddOpen
-    if ddOpen then
-        ddContent.Visible = true
-        arrow.Text = "▲"
-        TweenService:Create(ddContent, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 92)}):Play()
+function _G.refreshWaypoints()
+    for _, ch in ipairs(sc:GetChildren()) do
+        if ch:IsA("Frame") then ch:Destroy() end
+    end
+    for i, w in ipairs(W) do createWaypointRow(w, i) end
+end
+
+svb.MouseButton1Click:Connect(function()
+    local ch = player.Character
+    if not ch then return end
+    local h = ch:FindFirstChild("HumanoidRootPart")
+    if not h then return end
+    if #W >= CFG.Max then return end
+    local p = h.Position
+    table.insert(W, {x = p.X, y = p.Y, z = p.Z, name = "WP " .. (#W + 1)})
+    saveW()
+    _G.refreshWaypoints()
+end)
+
+-- Arena tab
+local ar = createTab("Survive Zombie Arena")
+
+local ah = Instance.new("TextLabel")
+ah.Size = UDim2.new(1, 0, 0, 30)
+ah.BackgroundTransparency = 1
+ah.Text = "🧟 Survive Zombie Arena"
+ah.TextColor3 = Color3.fromRGB(220, 255, 220)
+ah.TextSize = 16
+ah.Font = Enum.Font.GothamBold
+ah.TextXAlignment = Enum.TextXAlignment.Left
+ah.Parent = ar
+
+-- Dropdown builder
+local function makeDropdown(y, label, hc, cc)
+    local dc = Instance.new("Frame")
+    dc.Size = UDim2.new(1, 0, 0, 40)
+    dc.Position = UDim2.new(0, 0, 0, y)
+    dc.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    dc.Parent = ar
+    local dcc = Instance.new("UICorner", dc)
+    dcc.CornerRadius = UDim.new(0, 6)
+
+    local dh = Instance.new("TextButton")
+    dh.Size = UDim2.new(1, 0, 0, 40)
+    dh.BackgroundColor3 = hc
+    dh.Text = ""
+    dh.AutoButtonColor = false
+    dh.Parent = dc
+    local dhc = Instance.new("UICorner", dh)
+    dhc.CornerRadius = UDim.new(0, 6)
+
+    local dl = Instance.new("TextLabel")
+    dl.Size = UDim2.new(1, -40, 1, 0)
+    dl.Position = UDim2.new(0, 12, 0, 0)
+    dl.BackgroundTransparency = 1
+    dl.Text = label
+    dl.TextColor3 = Color3.fromRGB(230, 220, 255)
+    dl.TextSize = 14
+    dl.Font = Enum.Font.GothamBold
+    dl.TextXAlignment = Enum.TextXAlignment.Left
+    dl.Parent = dh
+
+    local arw = Instance.new("TextLabel")
+    arw.Size = UDim2.new(0, 30, 1, 0)
+    arw.Position = UDim2.new(1, -30, 0, 0)
+    arw.BackgroundTransparency = 1
+    arw.Text = "▼"
+    arw.TextColor3 = Color3.fromRGB(200, 200, 255)
+    arw.TextSize = 14
+    arw.Font = Enum.Font.GothamBold
+    arw.Parent = dh
+
+    local ct = Instance.new("Frame")
+    ct.Size = UDim2.new(1, 0, 0, 0)
+    ct.Position = UDim2.new(0, 0, 1, 4)
+    ct.BackgroundColor3 = cc
+    ct.ClipsDescendants = true
+    ct.Visible = false
+    ct.ZIndex = 5
+    ct.Parent = dc
+    local ctc = Instance.new("UICorner", ct)
+    ctc.CornerRadius = UDim.new(0, 6)
+    local ctl = Instance.new("UIListLayout", ct)
+    ctl.Padding = UDim.new(0, 4)
+
+    return dc, dh, arw, ct
+end
+
+-- Pirate Cove
+local dc1, dh1, ar1, ct1 = makeDropdown(40, "🏴‍☠️ Pirate Cove", Color3.fromRGB(50, 50, 80), Color3.fromRGB(35, 35, 50))
+
+local sa = Instance.new("TextButton")
+sa.Size = UDim2.new(1, -12, 0, 40)
+sa.BackgroundColor3 = Color3.fromRGB(150, 80, 200)
+sa.Text = "🎯 Safe Arena"
+sa.TextColor3 = Color3.fromRGB(255, 255, 255)
+sa.TextSize = 14
+sa.Font = Enum.Font.GothamBold
+sa.ZIndex = 6
+sa.Parent = ct1
+local sac = Instance.new("UICorner", sa)
+sac.CornerRadius = UDim.new(0, 6)
+sa.MouseButton1Click:Connect(function() tp(CFG.SA) end)
+
+local ph = Instance.new("TextButton")
+ph.Size = UDim2.new(1, -12, 0, 40)
+ph.BackgroundColor3 = Color3.fromRGB(60, 60, 85)
+ph.Text = "➕ More coming soon..."
+ph.TextColor3 = Color3.fromRGB(180, 180, 210)
+ph.TextSize = 13
+ph.Font = Enum.Font.Gotham
+ph.ZIndex = 6
+ph.Parent = ct1
+local phc = Instance.new("UICorner", ph)
+phc.CornerRadius = UDim.new(0, 6)
+
+local cs = Instance.new("TextLabel")
+cs.Size = UDim2.new(1, 0, 0, 60)
+cs.Position = UDim2.new(0, 0, 0, 84)
+cs.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+cs.BackgroundTransparency = 0.3
+cs.Text = "🏴‍☠️ Pirate Cove → 🎯 Safe Arena\nCoords: 790.659, 27.033, -62.436"
+cs.TextColor3 = Color3.fromRGB(170, 190, 220)
+cs.TextSize = 12
+cs.TextWrapped = true
+cs.TextXAlignment = Enum.TextXAlignment.Left
+cs.Parent = ar
+local csc = Instance.new("UICorner", cs)
+csc.CornerRadius = UDim.new(0, 6)
+local csp = Instance.new("UIPadding", cs)
+csp.PaddingLeft = UDim.new(0, 10)
+csp.PaddingRight = UDim.new(0, 10)
+
+-- Tundra
+local dc2, dh2, ar2, ct2 = makeDropdown(148, "❄️ Tundra", Color3.fromRGB(50, 70, 100), Color3.fromRGB(30, 40, 55))
+
+local ta = Instance.new("TextButton")
+ta.Size = UDim2.new(1, -12, 0, 40)
+ta.BackgroundColor3 = Color3.fromRGB(70, 140, 200)
+ta.Text = "🎯 Safe Arena 2"
+ta.TextColor3 = Color3.fromRGB(255, 255, 255)
+ta.TextSize = 14
+ta.Font = Enum.Font.GothamBold
+ta.ZIndex = 6
+ta.Parent = ct2
+local tac = Instance.new("UICorner", ta)
+tac.CornerRadius = UDim.new(0, 6)
+ta.MouseButton1Click:Connect(function() tp(CFG.TU) end)
+
+local ph2 = Instance.new("TextButton")
+ph2.Size = UDim2.new(1, -12, 0, 40)
+ph2.BackgroundColor3 = Color3.fromRGB(50, 65, 85)
+ph2.Text = "➕ More coming soon..."
+ph2.TextColor3 = Color3.fromRGB(180, 200, 220)
+ph2.TextSize = 13
+ph2.Font = Enum.Font.Gotham
+ph2.ZIndex = 6
+ph2.Parent = ct2
+local ph2c = Instance.new("UICorner", ph2)
+ph2c.CornerRadius = UDim.new(0, 6)
+
+local ts = Instance.new("TextLabel")
+ts.Size = UDim2.new(1, 0, 0, 60)
+ts.Position = UDim2.new(0, 0, 0, 192)
+ts.BackgroundColor3 = Color3.fromRGB(20, 30, 45)
+ts.BackgroundTransparency = 0.3
+ts.Text = "❄️ Tundra → 🎯 Safe Arena 2\nCoords: -25.759, 4.005, 49.839"
+ts.TextColor3 = Color3.fromRGB(190, 220, 240)
+ts.TextSize = 12
+ts.TextWrapped = true
+ts.TextXAlignment = Enum.TextXAlignment.Left
+ts.Parent = ar
+local tsc = Instance.new("UICorner", ts)
+tsc.CornerRadius = UDim.new(0, 6)
+local tsp = Instance.new("UIPadding", ts)
+tsp.PaddingLeft = UDim.new(0, 10)
+tsp.PaddingRight = UDim.new(0, 10)
+
+-- Layout logic
+local D1, D2 = false, false
+local function recalc()
+    local h1 = D1 and 92 or 0
+    local h2 = D2 and 92 or 0
+    local i = TweenInfo.new(0.2)
+    TweenService:Create(cs, i, {Position = UDim2.new(0, 0, 0, 84 + h1)}):Play()
+    TweenService:Create(dc2, i, {Position = UDim2.new(0, 0, 0, 148 + h1)}):Play()
+    TweenService:Create(ts, i, {Position = UDim2.new(0, 0, 0, 192 + h1 + h2)}):Play()
+end
+
+dh1.MouseButton1Click:Connect(function()
+    D1 = not D1
+    if D1 then
+        ct1.Visible = true
+        ar1.Text = "▲"
+        TweenService:Create(ct1, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 92)}):Play()
     else
-        arrow.Text = "▼"
-        local t = TweenService:Create(ddContent, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 0)})
+        ar1.Text = "▼"
+        local t = TweenService:Create(ct1, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 0)})
         t:Play()
-        t.Completed:Connect(function()
-            if not ddOpen then ddContent.Visible = false end
-        end)
+        t.Completed:Connect(function() if not D1 then ct1.Visible = false end end)
     end
-    recalcLayout()
+    recalc()
 end)
 
-tundraHeader.MouseButton1Click:Connect(function()
-    tundraOpen = not tundraOpen
-    if tundraOpen then
-        tundraContent.Visible = true
-        tundraArrow.Text = "▲"
-        TweenService:Create(tundraContent, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 92)}):Play()
+dh2.MouseButton1Click:Connect(function()
+    D2 = not D2
+    if D2 then
+        ct2.Visible = true
+        ar2.Text = "▲"
+        TweenService:Create(ct2, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 92)}):Play()
     else
-        tundraArrow.Text = "▼"
-        local t = TweenService:Create(tundraContent, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 0)})
+        ar2.Text = "▼"
+        local t = TweenService:Create(ct2, TweenInfo.new(0.15), {Size = UDim2.new(1, 0, 0, 0)})
         t:Play()
-        t.Completed:Connect(function()
-            if not tundraOpen then tundraContent.Visible = false end
-        end)
+        t.Completed:Connect(function() if not D2 then ct2.Visible = false end end)
     end
-    recalcLayout()
+    recalc()
 end)
 
-createSidebarButton("Survive Zombie Arena")
-createSidebarButton("Waypoints")
-
+-- Sidebar buttons + tab init
+createSidebarBtn("Survive Zombie Arena")
+createSidebarBtn("Waypoints")
 switchTab("Survive Zombie Arena")
-for _, c in ipairs(sidebar:GetChildren()) do
-    if c:IsA("TextButton") then
-        if c.Text == "Survive Zombie Arena" then
-            c.BackgroundColor3 = Color3.fromRGB(80, 80, 130)
-        end
+for _, ch in ipairs(sb:GetChildren()) do
+    if ch:IsA("TextButton") and ch.Text == "Survive Zombie Arena" then
+        ch.BackgroundColor3 = Color3.fromRGB(80, 80, 130)
     end
 end
 
-local function toggleUI()
-    mainFrame.Visible = not mainFrame.Visible
-end
+-- Toggle handlers
+local function toggleUI() mf.Visible = not mf.Visible end
+mb.MouseButton1Click:Connect(toggleUI)
+mnb.MouseButton1Click:Connect(toggleUI)
+cb.MouseButton1Click:Connect(function() mf.Visible = false end)
 
-miniButton.MouseButton1Click:Connect(toggleUI)
-minBtn.MouseButton1Click:Connect(toggleUI)
-closeBtn.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-end)
-
+-- Coord tracker
 task.spawn(function()
     while task.wait(0.1) do
-        local character = player.Character
-        if character then
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local p = hrp.Position
-                coordLabel.Text = string.format("X: %.1f  Y: %.1f  Z: %.1f", p.X, p.Y, p.Z)
+        local ch = player.Character
+        if ch then
+            local h = ch:FindFirstChild("HumanoidRootPart")
+            if h then
+                local p = h.Position
+                cl.Text = string.format("X: %.1f  Y: %.1f  Z: %.1f", p.X, p.Y, p.Z)
             end
         end
     end
 end)
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == CONFIG.UIKeybind then
+-- Keybinds
+UIS.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == CFG.UIKey then
         toggleUI()
-    elseif input.KeyCode == CONFIG.SafeArenaKeybind then
-        teleportTo(CONFIG.SafeArenaCoords)
-    elseif input.KeyCode == CONFIG.TundraKeybind then
-        teleportTo(CONFIG.TundraCoords)
+    elseif input.KeyCode == CFG.SAKey then
+        tp(CFG.SA)
+    elseif input.KeyCode == CFG.TUKey then
+        tp(CFG.TU)
     end
 end)
 
-loadWaypoints()
-refreshWaypoints()
+-- ==================== STARTUP SEQUENCE ====================
+task.spawn(function()
+    setProgress(20, "Loading waypoints...")
+    task.wait(0.25)
+    loadW()
+    _G.refreshWaypoints()
+
+    setProgress(55, "Building interface...")
+    task.wait(0.25)
+
+    setProgress(85, "Finalizing...")
+    task.wait(0.25)
+
+    setProgress(100, "Ready!")
+    task.wait(0.4)
+
+    TweenService:Create(loadFrame, TweenInfo.new(0.3), {
+        BackgroundTransparency = 1
+    }):Play()
+    TweenService:Create(loadTitle, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+    TweenService:Create(loadSub, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+    TweenService:Create(loadPct, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+    TweenService:Create(barBg, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(barFill, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(ls, TweenInfo.new(0.3), {Transparency = 1}):Play()
+
+    task.wait(0.35)
+    loadFrame.Visible = false
+
+    mf.Visible = true
+    mb.Visible = true
+end)
+-- =========================================================
